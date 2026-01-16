@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Voice Assistant</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&family=Inter:wght@400;500&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-hover: #4f46e5;
+            --bg-gradient: radial-gradient(circle at top right, #312e81, #1e1b4b, #0f172a);
+            --glass-bg: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --text-main: #f8fafc;
+            --text-sub: #94a3b8;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-gradient);
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 1000px;
+            height: 85vh;
+            display: flex;
+            gap: 20px;
+        }
+
+        /* Glassmorphism Panel */
+        .panel {
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .left-panel {
+            flex: 1;
+            max-width: 350px;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+
+        .right-panel {
+            flex: 2;
+            overflow: hidden;
+        }
+
+        h1 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 2.5rem;
+            margin-bottom: 30px;
+            background: linear-gradient(to right, #818cf8, #c084fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* Microphone Button */
+        .mic-btn {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            border: none;
+            background: var(--primary);
+            color: white;
+            font-size: 2rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 20px rgba(99, 102, 241, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        .mic-btn:hover {
+            transform: scale(1.05);
+            background: var(--primary-hover);
+        }
+
+        .mic-btn.recording {
+            background: #ef4444;
+            box-shadow: 0 0 30px rgba(239, 68, 68, 0.6);
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+            }
+
+            70% {
+                box-shadow: 0 0 0 20px rgba(239, 68, 68, 0);
+            }
+
+            100% {
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+            }
+        }
+
+        .status-text {
+            font-size: 1rem;
+            color: var(--text-sub);
+            margin-top: 10px;
+            min-height: 1.5rem;
+        }
+
+        .settings-area {
+            margin-top: 40px;
+            width: 100%;
+            text-align: left;
+        }
+
+        .setting-label {
+            font-size: 0.9rem;
+            color: var(--text-sub);
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .toggle-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+        }
+
+        /* Chat Area */
+        .chat-container {
+            flex: 1;
+            overflow-y: auto;
+            padding-right: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .message {
+            background: rgba(255, 255, 255, 0.08);
+            padding: 15px;
+            border-radius: 12px;
+            border-bottom-left-radius: 2px;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .msg-text {
+            font-size: 1rem;
+            line-height: 1.5;
+            color: var(--text-main);
+        }
+
+        .msg-summary {
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            font-size: 0.85rem;
+            color: #bdc3c7;
+            /* 밝은 회색 */
+            font-style: italic;
+        }
+
+        .msg-meta {
+            font-size: 0.75rem;
+            color: #64748b;
+            margin-top: 5px;
+            text-align: right;
+        }
+
+        .loading-indicator {
+            display: none;
+            color: var(--text-sub);
+            font-size: 0.9rem;
+            text-align: center;
+            padding: 10px;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+        }
+
+        .mode-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            margin-bottom: 10px;
+            background: rgba(99, 102, 241, 0.2);
+            color: #818cf8;
+            border: 1px solid rgba(99, 102, 241, 0.3);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <!-- Controls -->
+        <div class="panel left-panel">
+            <span class="mode-badge" id="modeBadge">MODE: Manual</span>
+            <h1>AI Voice<br>Recorder</h1>
+
+            <button class="mic-btn" id="micBtn">
+                <svg id="micIcon" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                    <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                    <line x1="12" y1="19" x2="12" y2="23"></line>
+                    <line x1="8" y1="23" x2="16" y2="23"></line>
+                </svg>
+            </button>
+            <div class="status-text" id="statusText">Ready to record</div>
+
+            <div class="settings-area">
+                <div class="setting-label">Transmission Mode</div>
+                <div class="toggle-container">
+                    <input type="checkbox" id="continuousMode">
+                    <label for="continuousMode" style="color: var(--text-sub); font-size: 0.9rem;">Auto-send every
+                        5s</label>
+                </div>
+            </div>
+        </div>
+
+        <!-- Transcript -->
+        <div class="panel right-panel">
+            <h2 style="font-family: 'Outfit'; margin-bottom: 20px; font-size: 1.2rem; color: var(--text-sub);">
+                Transcript History</h2>
+            <div class="chat-container" id="chatContainer">
+                <!-- Messages will appear here -->
+            </div>
+            <div class="loading-indicator" id="loadingIndicator">Processing audio...</div>
+        </div>
+    </div>
+
+    <script>
+        const micBtn = document.getElementById('micBtn');
+        const statusText = document.getElementById('statusText');
+        const chatContainer = document.getElementById('chatContainer');
+        const continuousModeCheck = document.getElementById('continuousMode');
+        const modeBadge = document.getElementById('modeBadge');
+        const loadingIndicator = document.getElementById('loadingIndicator');
+
+        let mediaRecorder;
+        let audioChunks = [];
+        let isRecording = false; // User's intent
+        let recordingInterval = null;
+
+        // Toggle Mode UI
+        continuousModeCheck.addEventListener('change', (e) => {
+            if (isRecording) {
+                alert("Please stop recording before changing modes.");
+                e.target.checked = !e.target.checked;
+                return;
+            }
+            if (e.target.checked) {
+                modeBadge.textContent = "MODE: Live Stream";
+                modeBadge.style.color = "#4ade80";
+                modeBadge.style.background = "rgba(74, 222, 128, 0.2)";
+                modeBadge.style.border = "1px solid rgba(74, 222, 128, 0.3)";
+            } else {
+                modeBadge.textContent = "MODE: Manual";
+                modeBadge.style.color = "#818cf8";
+                modeBadge.style.background = "rgba(99, 102, 241, 0.2)";
+                modeBadge.style.border = "1px solid rgba(99, 102, 241, 0.3)";
+            }
+        });
+
+        micBtn.addEventListener('click', () => {
+            if (!isRecording) {
+                startRecording();
+            } else {
+                stopRecording();
+            }
+        });
+
+        async function startRecording() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                isRecording = true;
+                micBtn.classList.add('recording');
+                statusText.textContent = "Recording...";
+
+                setupRecorder(stream);
+
+            } catch (err) {
+                console.error("Error accessing microphone:", err);
+                statusText.textContent = "Microphone access denied.";
+            }
+        }
+
+        function setupRecorder(stream) {
+            mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+            audioChunks = [];
+
+            mediaRecorder.ondataavailable = (event) => {
+                if (event.data.size > 0) {
+                    audioChunks.push(event.data);
+                }
+            };
+
+            mediaRecorder.onstop = () => {
+                // 1. Capture data immediately
+                const blob = new Blob(audioChunks, { type: 'audio/webm' });
+                audioChunks = []; // clear buffer
+
+                // 2. Upload (Fire and forget / Async)
+                if (blob.size > 0) {
+                    uploadAudio(blob).catch(err => console.error("Upload error:", err));
+                }
+
+                // 3. Restart immediately if Continuous Mode is on and user hasn't stopped
+                if (continuousModeCheck.checked && isRecording) {
+                    // Start next segment
+                    mediaRecorder.start();
+
+                    // Schedule next stop
+                    recordingInterval = setTimeout(() => {
+                        if (mediaRecorder.state === "recording") {
+                            mediaRecorder.stop();
+                        }
+                    }, 5000);
+                }
+            };
+
+            mediaRecorder.start();
+
+            // If starting in continuous mode, schedule the first stop
+            if (continuousModeCheck.checked) {
+                recordingInterval = setTimeout(() => {
+                    if (mediaRecorder.state === "recording") {
+                        mediaRecorder.stop();
+                    }
+                }, 5000);
+            }
+        }
+
+        function stopRecording() {
+            isRecording = false; // Signal intent to stop
+            micBtn.classList.remove('recording');
+            statusText.textContent = "Ready to record";
+
+            if (recordingInterval) {
+                clearTimeout(recordingInterval);
+                recordingInterval = null;
+            }
+
+            if (mediaRecorder && mediaRecorder.state === "recording") {
+                mediaRecorder.stop();
+            }
+
+            // Stop stream tracks to release mic
+            if (mediaRecorder && mediaRecorder.stream) {
+                mediaRecorder.stream.getTracks().forEach(track => track.stop());
+            }
+        }
+
+        async function uploadAudio(blob) {
+            const formData = new FormData();
+            formData.append("file", blob, "recording.webm");
+            formData.append("model_size", "base");
+
+            loadingIndicator.style.display = 'block';
+
+            try {
+                const response = await fetch('/upload-audio', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    const errText = await response.text();
+                    console.error('Server Error:', errText);
+                    throw new Error(`Server responded with ${response.status}`);
+                }
+
+                const data = await response.json();
+                addMessageToChat(data);
+
+            } catch (error) {
+                console.error('Upload failed:', error);
+                // statusText.textContent = "Error uploading chunk"; 
+            } finally {
+                loadingIndicator.style.display = 'none';
+            }
+        }
+
+        function addMessageToChat(data) {
+            const msgDiv = document.createElement('div');
+            msgDiv.className = 'message';
+
+            // 빈 텍스트 무시
+            if (!data.text || data.text.trim().length === 0) return;
+
+            msgDiv.innerHTML = `
+                <div class="msg-text">${data.text}</div>
+                <div class="msg-meta">Language: ${data.language} • ${data.processing_time.toFixed(2)}s</div>
+            `;
+
+            chatContainer.appendChild(msgDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+    </script>
+</body>
+
+</html>
