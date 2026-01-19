@@ -102,3 +102,24 @@ async def upload_audio(
 @app.get("/")
 async def read_index():
     return FileResponse("app/static/index.html")
+
+
+from pydantic import BaseModel
+
+
+class TextSummaryRequest(BaseModel):
+    text: str
+    method: str = "llm"  # 'llm' or 'rule-based'
+
+
+@app.post("/summarize-text")
+async def summarize_text(request: TextSummaryRequest):
+    """
+    텍스트를 입력받아 요약(SOAP Note 등)을 반환합니다.
+    """
+    try:
+        summary = summary_service.summarize(request.text, method=request.method)
+        return {"summary": summary}
+    except Exception as e:
+        logger.error(f"Error in summarize_text: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
