@@ -38,8 +38,8 @@
         }
 
         .container {
-            width: 90%;
-            max-width: 1000px;
+            width: 95%;
+            max-width: 1400px;
             height: 85vh;
             display: flex;
             gap: 20px;
@@ -60,15 +60,21 @@
 
         .left-panel {
             flex: 1;
-            max-width: 350px;
+            max-width: 300px;
             align-items: center;
             justify-content: center;
             text-align: center;
         }
 
+        .center-panel {
+            flex: 2;
+            overflow: hidden;
+        }
+
         .right-panel {
             flex: 2;
             overflow: hidden;
+            border-left: 1px solid rgba(255, 255, 255, 0.05);
         }
 
         h1 {
@@ -187,16 +193,6 @@
             color: var(--text-main);
         }
 
-        .msg-summary {
-            margin-top: 8px;
-            padding-top: 8px;
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
-            font-size: 0.85rem;
-            color: #bdc3c7;
-            /* 밝은 회색 */
-            font-style: italic;
-        }
-
         .msg-meta {
             font-size: 0.75rem;
             color: #64748b;
@@ -210,6 +206,29 @@
             font-size: 0.9rem;
             text-align: center;
             padding: 10px;
+        }
+
+        /* Summary Area */
+        .summary-content {
+            flex: 1;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.95rem;
+            line-height: 1.6;
+            color: #e2e8f0;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 15px;
+            border-radius: 10px;
+        }
+
+        .summary-loading {
+            font-size: 0.8rem;
+            color: var(--text-sub);
+            text-align: center;
+            margin-top: 10px;
+            font-style: italic;
+            visibility: hidden;
         }
 
         /* Scrollbar */
@@ -263,13 +282,13 @@
                 <div class="toggle-container">
                     <input type="checkbox" id="continuousMode">
                     <label for="continuousMode" style="color: var(--text-sub); font-size: 0.9rem;">Auto-send every
-                        5s</label>
+                        5s / Summary 10s</label>
                 </div>
             </div>
         </div>
 
         <!-- Transcript -->
-        <div class="panel right-panel">
+        <div class="panel center-panel">
             <h2 style="font-family: 'Outfit'; margin-bottom: 20px; font-size: 1.2rem; color: var(--text-sub);">
                 Transcript History</h2>
             <div class="chat-container" id="chatContainer">
@@ -277,12 +296,22 @@
             </div>
             <div class="loading-indicator" id="loadingIndicator">Processing audio...</div>
         </div>
+
+        <!-- Summary -->
+        <div class="panel right-panel">
+            <h2 style="font-family: 'Outfit'; margin-bottom: 20px; font-size: 1.2rem; color: var(--text-sub);">
+                SOAP Note Summary</h2>
+            <div class="summary-content" id="summaryContent">Waiting for conversation...</div>
+            <div class="summary-loading" id="summaryLoading">Generating summary...</div>
+        </div>
     </div>
 
     <script>
         const micBtn = document.getElementById('micBtn');
         const statusText = document.getElementById('statusText');
         const chatContainer = document.getElementById('chatContainer');
+        const summaryContent = document.getElementById('summaryContent');
+        const summaryLoading = document.getElementById('summaryLoading');
         const continuousModeCheck = document.getElementById('continuousMode');
         const modeBadge = document.getElementById('modeBadge');
         const loadingIndicator = document.getElementById('loadingIndicator');
@@ -291,6 +320,10 @@
         let audioChunks = [];
         let isRecording = false; // User's intent
         let recordingInterval = null;
+        let summaryInterval = null;
+
+        // Global transcript storage
+        let fullTranscript = "";
 
         // Toggle Mode UI
         continuousModeCheck.addEventListener('change', (e) => {
@@ -327,7 +360,13 @@
                 micBtn.classList.add('recording');
                 statusText.textContent = "Recording...";
 
+                // Reset transcript if starting fresh? 
+                // For this demo, let's keep appending. Or maybe clear?
+                // User requirement implies "real-time", let's clear on new session if manual.
+                // But if continuous, we keep. Let's just append for now.
+
                 setupRecorder(stream);
+                startSummaryInterval();
 
             } catch (err) {
                 console.error("Error accessing microphone:", err);
@@ -390,6 +429,10 @@
                 clearTimeout(recordingInterval);
                 recordingInterval = null;
             }
+            if (summaryInterval) {
+                clearInterval(summaryInterval);
+                summaryInterval = null;
+            }
 
             if (mediaRecorder && mediaRecorder.state === "recording") {
                 mediaRecorder.stop();
@@ -398,6 +441,11 @@
             // Stop stream tracks to release mic
             if (mediaRecorder && mediaRecorder.stream) {
                 mediaRecorder.stream.getTracks().forEach(track => track.stop());
+            }
+
+            // Final summary call?
+            if (fullTranscript.trim()) {
+                fetchSummary();
             }
         }
 
@@ -432,6 +480,13 @@
         }
 
         function addMessageToChat(data) {
+            // Append to global transcript
+            if (data.text && data.text.trim().length > 0) {
+                // Add speaker label if needed, but for now just text
+                // Might want to separate by newline
+                fullTranscript += data.text + "\n";
+            }
+
             const msgDiv = document.createElement('div');
             msgDiv.className = 'message';
 
@@ -445,6 +500,38 @@
 
             chatContainer.appendChild(msgDiv);
             chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        function startSummaryInterval() {
+            if (summaryInterval) clearInterval(summaryInterval);
+            // 10초마다 요약 요청
+            summaryInterval = setInterval(() => {
+                if (fullTranscript.trim().length > 10) { // 최소 길이 체크
+                    fetchSummary();
+                }
+            }, 10000);
+        }
+
+        async function fetchSummary() {
+            summaryLoading.style.visibility = 'visible';
+            try {
+                const response = await fetch('/summarize-text', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: fullTranscript, method: 'llm' })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    summaryContent.textContent = data.summary;
+                } else {
+                    console.error("Summary failed");
+                }
+            } catch (e) {
+                console.error("Summary error:", e);
+            } finally {
+                summaryLoading.style.visibility = 'hidden';
+            }
         }
     </script>
 </body>

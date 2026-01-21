@@ -50,19 +50,18 @@ class SummaryService:
 
         client = OpenAI(api_key=api_key)
 
-        prompt = (
-            "다음은 의사와 환자의 대화 내용입니다. "
-            "이 내용을 바탕으로 전문적인 의료 기록인 SOAP Note 형식으로 요약해주세요.\n\n"
-            "형식:\n"
-            "Subjective (주관적 호소): 환자가 느끼는 증상, 호소하는 내용\n"
-            "Objective (객관적 소견): 의사가 관찰한 내용, 검사 결과 등\n"
-            "Assessment (평가): 진단명 또는 의심되는 질환\n"
-            "Plan (계획): 처방, 추후 검사 계획, 생활 습관 지도 등\n\n"
-            "지침:\n"
-            "- 한국어 대화 내용이니 한국어로 자연스럽게 요약해라.\n"
-            "- 전문적인 용어를 사용하되, 내용은 이해하기 쉽게 간결하게 작성해라.\n\n"
-            f"대화 내용:\n{text}"
-        )
+        client = OpenAI(api_key=api_key)
+
+        # 프롬프트 파일 경로 설정 (app/prompts/soap_summary_template.txt)
+        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # app/
+        prompt_path = os.path.join(base_dir, "prompts", "soap_summary_template.txt")
+
+        try:
+            with open(prompt_path, "r", encoding="utf-8") as f:
+                template = f.read()
+            prompt = template.replace("{text}", text)
+        except Exception as e:
+            return f"Error reading prompt file: {str(e)}"
 
         try:
             response = client.chat.completions.create(
