@@ -105,6 +105,11 @@ async def read_index():
     return FileResponse("app/static/index.html")
 
 
+@app.get("/summary-test")
+async def read_summary_test():
+    return FileResponse("app/static/summary_test.html")
+
+
 from pydantic import BaseModel
 
 
@@ -150,5 +155,3 @@ async def get_prompt():
     except Exception as e:
         logger.error(f"Error reading prompt: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
-

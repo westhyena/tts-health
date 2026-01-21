@@ -13,7 +13,10 @@ gcloud run deploy "$SERVICE_NAME" \
     --source . \
     --region "$REGION" \
     --allow-unauthenticated \
-    --port 8080
+    --port 8080 \
+    --memory 8Gi \
+    --cpu 4 \
+    --timeout 300
 
 # Note:
 # --source . : Uploads the source code and builds it using Cloud Build (requires Dockerfile)

@@ -49,33 +49,60 @@ class SummaryService:
         예: OpenAI API, Local LLM 등
         """
         # TODO: 실제 LLM API 연동 구현
+        # LLM Provider 확인 (기본값: openai)
+        llm_provider = os.getenv("LLM_PROVIDER", "openai").lower()
+
+        # API Key 설정 (Ollama는 dummy 키 허용)
         api_key = os.getenv("OPENAI_API_KEY")
-        if not api_key:
-            return "Error: OPENAI_API_KEY environment variable is not set."
 
-        client = OpenAI(api_key=api_key)
+        client_args = {}
+        model_name = "gpt-3.5-turbo"
 
-        if custom_prompt:
-            template = custom_prompt
+        if llm_provider == "ollama":
+            # Ollama 설정
+            client_args["base_url"] = "http://localhost:11434/v1"
+            client_args["api_key"] = (
+                "ollama"  # Ollama requires a dummy key compliant with OpenAI SDK
+            )
+            model_name = "llama3.1"
         else:
-            # 프롬프트 파일 경로 설정 (app/prompts/soap_summary_template.txt)
-            base_dir = os.path.dirname(
-                os.path.dirname(os.path.abspath(__file__))
-            )  # app/
-            prompt_path = os.path.join(base_dir, "prompts", "soap_summary_template.txt")
-
-            try:
-                with open(prompt_path, "r", encoding="utf-8") as f:
-                    template = f.read()
-            except Exception as e:
-                return f"Error reading prompt file: {str(e)}"
-
-        # Remove the placeholder if present to clean up system prompt
-        system_prompt = template.replace("{text}", "").strip()
+            # OpenAI 설정
+            if not api_key:
+                return "Error: OPENAI_API_KEY environment variable is not set."
+            client_args["api_key"] = api_key
 
         try:
+            import logging
+
+            logger = logging.getLogger(__name__)
+            logger.info(
+                f"Using LLM Provider: {llm_provider.upper()}, Model: {model_name}"
+            )
+
+            client = OpenAI(**client_args)
+
+            if custom_prompt:
+                template = custom_prompt
+            else:
+                # 프롬프트 파일 경로 설정 (app/prompts/soap_summary_template.txt)
+                base_dir = os.path.dirname(
+                    os.path.dirname(os.path.abspath(__file__))
+                )  # app/
+                prompt_path = os.path.join(
+                    base_dir, "prompts", "soap_summary_template.txt"
+                )
+
+                try:
+                    with open(prompt_path, "r", encoding="utf-8") as f:
+                        template = f.read()
+                except Exception as e:
+                    return f"Error reading prompt file: {str(e)}"
+
+            # Remove the placeholder if present to clean up system prompt
+            system_prompt = template.replace("{text}", "").strip()
+
             response = client.chat.completions.create(
-                model="gpt-3.5-turbo",
+                model=model_name,
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": text},
@@ -83,8 +110,9 @@ class SummaryService:
                 temperature=0.5,
             )
             return response.choices[0].message.content.strip()
+
         except Exception as e:
-            return f"Error during LLM summarization: {str(e)}"
+            return f"Error during LLM summarization ({llm_provider}): {str(e)}"
 
 
 summary_service = SummaryService()
