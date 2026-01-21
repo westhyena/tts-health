@@ -60,7 +60,9 @@ class SummaryService:
 
         if llm_provider == "ollama":
             # Ollama 설정
-            client_args["base_url"] = "http://localhost:11434/v1"
+            # 외부 Ollama 서버 주소 지원 (기본값: localhost)
+            base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434/v1")
+            client_args["base_url"] = base_url
             client_args["api_key"] = (
                 "ollama"  # Ollama requires a dummy key compliant with OpenAI SDK
             )

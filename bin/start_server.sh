@@ -16,23 +16,8 @@ LLM_PROVIDER=${LLM_PROVIDER:-openai}
 echo "Starting server with LLM_PROVIDER=$LLM_PROVIDER"
 
 if [ "$LLM_PROVIDER" = "ollama" ]; then
-    # Start Ollama in the background
-    echo "Starting Ollama..."
-    ollama serve &
-    OLLAMA_PID=$!
-
-    # Wait for Ollama to start
-    echo "Waiting for Ollama to become available..."
-    until ollama list > /dev/null 2>&1; do
-        echo "Waiting for Ollama..."
-        sleep 1
-    done
-
-    echo "Ollama is ready."
-
-    # Check/Pull model if needed (optional check)
-    echo "Checking available models..."
-    ollama list
+    echo "Using External Ollama Provider."
+    # Local startup logic removed for separation
 fi
 
 # Start the main application
