@@ -69,9 +69,42 @@
         <!-- 결과가 여기에 표시됩니다 -->
     </div>
 
+    <hr style="margin: 30px 0; border: 0; border-top: 1px solid #ddd;">
+
+    <details>
+        <summary style="cursor: pointer; font-weight: bold; font-size: 1.1em; margin-bottom: 10px;">프롬프트 설정 (Prompt
+            Settings)</summary>
+        <div style="margin-top: 10px;">
+            <p style="color: #666; font-size: 0.9em; margin-bottom: 5px;">
+                테스트용 프롬프트입니다. 수정 후 요약하기를 누르면 <b>저장되지 않고 즉시 적용</b>됩니다.
+            </p>
+            <textarea id="promptEditor"
+                style="height: 300px; font-family: monospace; background-color: #f9f9f9; width: 100%; box-sizing: border-box;"></textarea>
+        </div>
+    </details>
+
     <script>
+        // 페이지 로드 시 현재 프롬프트 불러오기
+        window.addEventListener('DOMContentLoaded', loadPrompt);
+
+        async function loadPrompt() {
+            try {
+                const response = await fetch('/prompt');
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById('promptEditor').value = data.content;
+                } else {
+                    console.error('Failed to load prompt');
+                }
+            } catch (error) {
+                console.error('Error loading prompt:', error);
+            }
+        }
+
         async function summarize() {
             const text = document.getElementById('conversation').value;
+            const prompt = document.getElementById('promptEditor').value;
+
             if (!text.trim()) {
                 alert('대화 내용을 입력해주세요.');
                 return;
@@ -84,7 +117,11 @@
                 const response = await fetch('/summarize-text', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ text: text, method: 'llm' })
+                    body: JSON.stringify({
+                        text: text,
+                        method: 'llm',
+                        custom_prompt: prompt
+                    })
                 });
 
                 if (!response.ok) {

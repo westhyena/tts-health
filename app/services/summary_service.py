@@ -4,13 +4,16 @@ from openai import OpenAI
 
 
 class SummaryService:
-    def summarize(self, text: str, method: str = "rule-based") -> str:
+    def summarize(
+        self, text: str, method: str = "rule-based", custom_prompt: Optional[str] = None
+    ) -> str:
         """
         주어진 텍스트를 요약합니다.
 
         Args:
             text (str): 요약할 원본 텍스트
             method (str): 요약 방식 ('rule-based' 또는 'llm')
+            custom_prompt (str, optional): LLM 요약 시 사용할 커스텀 프롬프트
 
         Returns:
             str: 요약된 텍스트
@@ -19,7 +22,7 @@ class SummaryService:
             return ""
 
         if method == "llm":
-            return self._summarize_with_llm(text)
+            return self._summarize_with_llm(text, custom_prompt)
         else:
             return self._summarize_rule_based(text)
 
@@ -38,7 +41,9 @@ class SummaryService:
         summary = ". ".join(sentences[:3]) + "."
         return summary
 
-    def _summarize_with_llm(self, text: str) -> str:
+    def _summarize_with_llm(
+        self, text: str, custom_prompt: Optional[str] = None
+    ) -> str:
         """
         LLM API를 호출하여 요약하는 로직을 이곳에 구현합니다.
         예: OpenAI API, Local LLM 등
@@ -50,28 +55,30 @@ class SummaryService:
 
         client = OpenAI(api_key=api_key)
 
-        client = OpenAI(api_key=api_key)
+        if custom_prompt:
+            template = custom_prompt
+        else:
+            # 프롬프트 파일 경로 설정 (app/prompts/soap_summary_template.txt)
+            base_dir = os.path.dirname(
+                os.path.dirname(os.path.abspath(__file__))
+            )  # app/
+            prompt_path = os.path.join(base_dir, "prompts", "soap_summary_template.txt")
 
-        # 프롬프트 파일 경로 설정 (app/prompts/soap_summary_template.txt)
-        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # app/
-        prompt_path = os.path.join(base_dir, "prompts", "soap_summary_template.txt")
+            try:
+                with open(prompt_path, "r", encoding="utf-8") as f:
+                    template = f.read()
+            except Exception as e:
+                return f"Error reading prompt file: {str(e)}"
 
-        try:
-            with open(prompt_path, "r", encoding="utf-8") as f:
-                template = f.read()
-            prompt = template.replace("{text}", text)
-        except Exception as e:
-            return f"Error reading prompt file: {str(e)}"
+        # Remove the placeholder if present to clean up system prompt
+        system_prompt = template.replace("{text}", "").strip()
 
         try:
             response = client.chat.completions.create(
                 model="gpt-3.5-turbo",
                 messages=[
-                    {
-                        "role": "system",
-                        "content": "You are a helpful medical assistant skilled in creating SOAP notes.",
-                    },
-                    {"role": "user", "content": prompt},
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": text},
                 ],
                 temperature=0.5,
             )

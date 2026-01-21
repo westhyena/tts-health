@@ -1,4 +1,5 @@
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
+from typing import Optional
 from fastapi.responses import JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 import shutil
@@ -110,16 +111,44 @@ from pydantic import BaseModel
 class TextSummaryRequest(BaseModel):
     text: str
     method: str = "llm"  # 'llm' or 'rule-based'
+    custom_prompt: Optional[str] = None
 
 
 @app.post("/summarize-text")
 async def summarize_text(request: TextSummaryRequest):
     """
     텍스트를 입력받아 요약(SOAP Note 등)을 반환합니다.
+    custom_prompt가 제공되면 해당 프롬프트를 사용하여 요약합니다.
     """
     try:
-        summary = summary_service.summarize(request.text, method=request.method)
+        summary = summary_service.summarize(
+            request.text, method=request.method, custom_prompt=request.custom_prompt
+        )
         return {"summary": summary}
     except Exception as e:
         logger.error(f"Error in summarize_text: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/prompt")
+async def get_prompt():
+    """
+    현재 설정된 프롬프트 내용을 반환합니다.
+    """
+    try:
+        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        prompt_path = os.path.join(
+            base_dir, "app", "prompts", "soap_summary_template.txt"
+        )
+
+        if not os.path.exists(prompt_path):
+            return JSONResponse(content={"content": ""})
+
+        with open(prompt_path, "r", encoding="utf-8") as f:
+            content = f.read()
+        return {"content": content}
+    except Exception as e:
+        logger.error(f"Error reading prompt: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
