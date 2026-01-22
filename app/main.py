@@ -155,3 +155,12 @@ async def get_prompt():
     except Exception as e:
         logger.error(f"Error reading prompt: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/llm-config")
+async def get_llm_config():
+    """
+    현재 설정된 LLM Provider 정보를 반환합니다.
+    """
+    provider = os.getenv("LLM_PROVIDER", "openai").upper()
+    return {"provider": provider}

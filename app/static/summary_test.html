@@ -52,7 +52,9 @@
 </head>
 
 <body>
-    <h1>SOAP Note 요약 테스트</h1>
+    <h1>SOAP Note 요약 테스트 <span id="provider-badge"
+            style="font-size: 0.5em; background: #eee; padding: 4px 8px; border-radius: 4px; vertical-align: middle;">Loading...</span>
+    </h1>
     <p>환자와 의사의 대화 내용을 아래에 입력하고 '요약하기' 버튼을 누르세요.</p>
 
     <textarea id="conversation" placeholder="예시:
@@ -84,8 +86,35 @@
     </details>
 
     <script>
-        // 페이지 로드 시 현재 프롬프트 불러오기
-        window.addEventListener('DOMContentLoaded', loadPrompt);
+        // 페이지 로드 시 현재 프롬프트 및 설정 불러오기
+        window.addEventListener('DOMContentLoaded', () => {
+            loadPrompt();
+            loadConfig();
+        });
+
+        async function loadConfig() {
+            try {
+                const response = await fetch('/llm-config');
+                if (response.ok) {
+                    const data = await response.json();
+                    const badge = document.getElementById('provider-badge');
+                    badge.textContent = data.provider;
+
+                    // Provider에 따른 색상 구분
+                    if (data.provider === 'OLLAMA') {
+                        badge.style.backgroundColor = '#e6f7ff'; // Blueish
+                        badge.style.color = '#0050b3';
+                        badge.style.border = '1px solid #91d5ff';
+                    } else {
+                        badge.style.backgroundColor = '#f6ffed'; // Greenish for OpenAI
+                        badge.style.color = '#389e0d';
+                        badge.style.border = '1px solid #b7eb8f';
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading config:', error);
+            }
+        }
 
         async function loadPrompt() {
             try {
