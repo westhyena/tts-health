@@ -1,6 +1,6 @@
-import os
 from typing import Optional
 from openai import OpenAI
+from app.config import settings
 
 
 class SummaryService:
@@ -50,10 +50,10 @@ class SummaryService:
         """
         # TODO: 실제 LLM API 연동 구현
         # LLM Provider 확인 (기본값: openai)
-        llm_provider = os.getenv("LLM_PROVIDER", "openai").lower()
+        llm_provider = settings.LLM_PROVIDER.lower()
 
         # API Key 설정 (Ollama는 dummy 키 허용)
-        api_key = os.getenv("OPENAI_API_KEY")
+        api_key = settings.OPENAI_API_KEY
 
         client_args = {}
         model_name = "gpt-3.5-turbo"
@@ -61,7 +61,7 @@ class SummaryService:
         if llm_provider == "ollama":
             # Ollama 설정
             # 외부 Ollama 서버 주소 지원 (기본값: localhost)
-            base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434/v1")
+            base_url = settings.OLLAMA_BASE_URL
             client_args["base_url"] = base_url
             client_args["api_key"] = (
                 "ollama"  # Ollama requires a dummy key compliant with OpenAI SDK

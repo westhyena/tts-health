@@ -6,9 +6,14 @@ import shutil
 import os
 import uuid
 import logging
+from dotenv import load_dotenv
+
 from app.services.stt_service import stt_service
 from app.services.summary_service import summary_service
+from app.routers import emr
 from app.schemas import STTResponse
+
+from app.config import settings
 
 # 로깅 설정
 logging.basicConfig(level=logging.INFO)
@@ -20,12 +25,13 @@ app = FastAPI(
     version="1.0.0",
 )
 
+app.include_router(emr.router)
+
 # Static file settings
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 # 임시 파일 저장 경로
-UPLOAD_DIR = "uploads"
-os.makedirs(UPLOAD_DIR, exist_ok=True)
+os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
 
 
 @app.post("/upload-audio", response_model=STTResponse)
@@ -53,7 +59,7 @@ async def upload_audio(
 
     # 고유한 파일명 생성하여 저장 (동시 요청 충돌 방지)
     unique_filename = f"{uuid.uuid4()}{ext}"
-    file_path = os.path.join(UPLOAD_DIR, unique_filename)
+    file_path = os.path.join(settings.UPLOAD_DIR, unique_filename)
 
     try:
         # 1. 파일 저장
@@ -162,5 +168,5 @@ async def get_llm_config():
     """
     현재 설정된 LLM Provider 정보를 반환합니다.
     """
-    provider = os.getenv("LLM_PROVIDER", "openai").upper()
+    provider = settings.LLM_PROVIDER.upper()
     return {"provider": provider}
