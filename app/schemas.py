@@ -137,6 +137,7 @@ class Note(NoteBase):
 # Visit
 class VisitBase(BaseModel):
     doctor_id: int
+    department: Optional[str] = None
     visit_date: Optional[datetime] = None
     status: str = "completed"
     chief_complaint: Optional[str] = None
